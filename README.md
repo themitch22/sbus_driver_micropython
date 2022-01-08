@@ -1,3 +1,7 @@
+This fork is for SBUS for the micropython implementation for the Raspberry Pi Pico RP2040
+
+The UART init does not invert the incoming signal. I used an inverter circuit going to the UART1 pin on the pico.
+
 # sbus_driver_micropython
 a Micropython driver for the SBUS protocol
 
