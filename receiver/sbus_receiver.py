@@ -18,14 +18,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-from pyb import UART
+from machine import UART, Pin
 import array
 
 
 class SBUSReceiver:
     def __init__(self, uart_port):
-        self.sbus = UART(uart_port, 100000)
-        self.sbus.init(100000, bits=8, parity=0, stop=2, timeout_char=3, read_buf_len=250)
+        self.sbus = UART(uart_port, 100000, tx = Pin(4), rx = Pin(5), bits=8, parity=0, stop=2)
+#       self.sbus.init(rx = Pin(9), baudrate = 100000, bits=8, parity=0, stop=2)
 
         # constants
         self.START_BYTE = b'0f'
@@ -145,9 +145,11 @@ class SBUSReceiver:
                         self.startByteFound = False
                         self.isSync = True
                         self.frameIndex = 0
+#                        return("found sync")
                 else:
                     self.sbus.readinto(self.sbusBuff, 1)  # keep reading 1 byte until the end of frame
                     self.frameIndex += 1
+#                    return("start byte found no sync")
             else:
                 self.frameIndex = 0
                 self.sbus.readinto(self.sbusBuff, 1)  # read 1 byte
@@ -163,13 +165,14 @@ class SBUSReceiver:
         """
 
         if self.isSync:
-            if self.sbus.any() >= self.SBUS_FRAME_LEN:
+            if self.sbus.any(): # uart.any() returns a 0 or a 1 in this implementation which 'self.sbus.any() >= self.SBUS_FRAME_LEN' would never be true. 3 days working on this. 
                 self.sbus.readinto(self.sbusFrame, self.SBUS_FRAME_LEN)  # read the whole frame
                 if (self.sbusFrame[0] == 15 and self.sbusFrame[
-                        self.SBUS_FRAME_LEN - 1] == 0):  # TODO: Change to use constant var value
+                    self.SBUS_FRAME_LEN - 1] == 0):  # TODO: Change to use constant var value
                     self.validSbusFrame += 1
                     self.outOfSyncCounter = 0
                     self.decode_frame()
+                    return("decode")
                 else:
                     self.lostSbusFrame += 1
                     self.outOfSyncCounter += 1
@@ -177,5 +180,8 @@ class SBUSReceiver:
                 if self.outOfSyncCounter > self.OUT_OF_SYNC_THD:
                     self.isSync = False
                     self.resyncEvent += 1
+                    
+            return("is synced")       
         else:
             self.get_sync()
+
